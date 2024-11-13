@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 cranelift = { version = "0.113.1", features = ["jit", "module"] }
+fasteval = "0.2.4"
+random = "0.14.0"
