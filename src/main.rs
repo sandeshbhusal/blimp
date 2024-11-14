@@ -12,6 +12,10 @@ use random::Source;
 
 type RvalType = extern "C" fn(f64, f64) -> f64;
 
+mod ast;
+mod lexer;
+mod parser;
+
 fn compile() -> RvalType {
     let jit_builder = JITBuilder::new(cranelift::module::default_libcall_names()).unwrap();
     let mut jit_module = JITModule::new(jit_builder);
@@ -50,7 +54,7 @@ fn compile() -> RvalType {
     ptr_b
 }
 
-const SIZE: usize = 1_000_000;
+const SIZE: usize = 100_000_000;
 
 fn main() -> Result<(), fasteval::Error> {
     let compiled = compile();
