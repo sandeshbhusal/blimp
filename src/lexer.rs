@@ -11,14 +11,11 @@ pub(crate) enum TokenType {
     Lbrace,
     Rbrace,
     Colon,
+    SemiColon,
     Comma,
     Arrow,
 
-    KwFn,
     KwLet,
-    KwI32,
-    KwF32,
-    KwVec,
     KwReturn,
     KwFalse,
     KwTrue,
@@ -53,7 +50,6 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
     let mut map = IndexMap::new();
     for variant in TokenType::iter() {
         let pattern = match variant {
-            TokenType::KwFn => "fn",
             TokenType::KwLet => "let",
             TokenType::KwIf => "if",
             TokenType::KwElse => "else",
@@ -75,8 +71,6 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
             TokenType::Gt => ">",
             TokenType::Eq => "==",
             TokenType::Ne => "!=",
-            TokenType::KwI32 => "i32",
-            TokenType::KwF32 => "f32",
             TokenType::KwFalse => "false",
             TokenType::KwTrue => "true",
             TokenType::Multiply => r"\*",
@@ -86,9 +80,9 @@ static PATTERN_MAP: LazyLock<IndexMap<&'static str, TokenType>> = LazyLock::new(
             TokenType::Not => "not",
             TokenType::Dot => r"\.",
             TokenType::Mod => "%",
-            TokenType::KwVec => "vec",
             TokenType::Assign => "=",
             TokenType::Arrow => "->",
+            TokenType::SemiColon => ";",
         };
 
         map.insert(pattern, variant);
@@ -177,6 +171,12 @@ mod lexer_tests {
         }
         "#;
 
-        dbg!(lexer(program).expect("Lexer SHOULD work."));
+        match lexer(program) {
+            Ok(_tokens) => {
+            }
+            Err((tokens, remaining)) => {
+                panic!("Error: {:?}, Remaining: {}", tokens, remaining);
+            }
+        }
     }
 }

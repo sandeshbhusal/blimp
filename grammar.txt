@@ -1,0 +1,44 @@
+let gcd: fn(x: i32, y: i32) -> i32 = {
+    if y == 0 {
+        return x;
+    } else {
+        let temp: int = y;
+        y = y % x;
+        x = temp;
+
+        let add_simd: func(vec<i32>, vec<i32>) -> nil = {
+            let result: vec<i32> = simdadd(x, y);
+        } 
+
+        return gcd(x, y);
+    }
+}
+
+Block = '{' Statement* '}'
+Statement = IfStatement |
+            WhileStatement |
+            DeclStatement |
+            AssignStatement |
+            ReturnStatement
+
+IfStatement = 'if' Expr Block ('else' Block)?
+WhileStatement = 'while' Expr Block
+DeclStatement = VardeclStatement | FuncdeclStatement
+AssignStatement = ident '=' Expr ';'
+ReturnStatement = 'return' Expr ';'
+
+VardeclStatement = 'let' ident ':' Typedecl '=' Expr ';'
+FuncdeclStatement = 'func' ident '(' ParamList? ')' ':' Typedecl Block
+
+ParamList = Param (',' Param)* 
+Param = ident ':' Typedecl
+
+Expr = ident | number | number '.' number |
+        Expr '+' Expr |
+        Expr '-' Expr |
+        Expr '*' Expr |
+        Expr '/' Expr |
+        Expr '%' Expr |
+        '(' Expr ')'
+
+Typedecl = 'i32' | 'f32' | 'bool' | 'vec<' Typedecl '>' | 'func' '(' ParamList? ')' ':' Typedecl

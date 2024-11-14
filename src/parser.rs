@@ -14,10 +14,7 @@ pub enum ParserError {
     EmptyTokenStream,
 
     #[error("Expected {expected:?}, but found {found:?}")]
-    UnexpectedToken {
-        expected: TokenType,
-        found: TokenType,
-    },
+    UnexpectedToken { expected: TokenType, found: Token },
 
     #[error("Error casting {} to i32", .0)]
     I32ParseError(std::num::ParseIntError),
@@ -25,16 +22,16 @@ pub enum ParserError {
     #[error("Error casting {} to f32", .0)]
     F32ParseError(std::num::ParseFloatError),
 
-    #[error("{:?} is not an operator token", .0)]
-    NotAnOperator(TokenType),
+    #[error("{:?} is not an operator token at {}", .0.r#type, .0.start)]
+    NotAnOperator(Token),
 
     #[error("{:?} does not outline an expression prefix", .0)]
-    NotAnExpressionPrefix(TokenType),
+    NotAnExpressionPrefix(Token),
 }
 
 /// Returns the precedence, and whether the operator is left associative
-fn get_precedence(token_type: TokenType) -> Result<(i32, bool), ParserError> {
-    match token_type {
+fn get_precedence(token: Token) -> Result<(i32, bool), ParserError> {
+    match token.r#type {
         TokenType::Plus => Ok((10, true)),
         TokenType::Minus => Ok((10, true)),
         TokenType::Multiply => Ok((20, true)),
@@ -53,15 +50,15 @@ fn get_precedence(token_type: TokenType) -> Result<(i32, bool), ParserError> {
         TokenType::Not => Ok((60, false)),
         TokenType::Assign => Ok((0, false)),
 
-        _ => Err(ParserError::NotAnOperator(token_type)),
+        _ => Err(ParserError::NotAnOperator(token)),
     }
 }
 
-impl TryFrom<TokenType> for ast::Op {
+impl TryFrom<Token> for ast::Op {
     type Error = ParserError;
 
-    fn try_from(value: TokenType) -> Result<Self, Self::Error> {
-        let op = match value {
+    fn try_from(value: Token) -> Result<Self, Self::Error> {
+        let op = match value.r#type {
             TokenType::Plus => Ok(ast::Op::Plus),
             TokenType::Minus => Ok(ast::Op::Minus),
             TokenType::Multiply => Ok(ast::Op::Multiply),
@@ -101,7 +98,7 @@ impl<'a> Parser<'a> {
         } else {
             Err(ParserError::UnexpectedToken {
                 expected: token_type,
-                found: token.r#type,
+                found: token.clone(),
             })
         }
     }
@@ -161,6 +158,15 @@ impl<'a> Parser<'a> {
 
         let first_token = self.input_stream.first();
         let mut prefix: Expr = match first_token.map(|t| t.r#type) {
+            Some(TokenType::Lparen) => {
+                // Parenthesized expression.
+                // Parse the "(" and then parse the expression inside it.
+                self.expect(TokenType::Lparen)?;
+                let expr = self.parse_expr()?;
+                self.expect(TokenType::Rparen)?;
+                expr
+            }
+
             Some(TokenType::Number) => {
                 // Could be int or float.
                 // Peek the next token, if it is a "Dot", then parse a float.
@@ -206,7 +212,9 @@ impl<'a> Parser<'a> {
             }
 
             Some(tok) => {
-                return Err(ParserError::NotAnExpressionPrefix(tok));
+                return Err(ParserError::NotAnExpressionPrefix(
+                    first_token.unwrap().clone(),
+                ));
             }
 
             None => {
@@ -219,7 +227,7 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            if let Ok((op_precedence, _is_left_associative)) = get_precedence(op.r#type) {
+            if let Ok((op_precedence, _is_left_associative)) = get_precedence(op.clone()) {
                 if op_precedence >= precedence {
                     self.advance();
                     let remaining = self.oprec_parser(op_precedence)?;
@@ -227,14 +235,15 @@ impl<'a> Parser<'a> {
                     let generated_expr = Expr::Binary {
                         lhs: Box::new(prefix),
                         rhs: Box::new(remaining),
-                        op: op.r#type.try_into()?,
+                        op: op.clone().try_into()?,
                     };
                     prefix = generated_expr;
                 } else {
                     break;
                 }
             } else {
-                return Err(ParserError::NotAnOperator(op.r#type));
+                break;
+                // return Err(ParserError::NotAnOperator(op.clone()));
             }
         }
 
@@ -291,6 +300,8 @@ impl<'a> Parser<'a> {
                 let return_type = Box::new(self.parse_type()?);
                 TypeDecl::Func(param_list, return_type)
             }
+            "nil" => TypeDecl::Nil,
+
             string => TypeDecl::UDT(string.to_string()),
         };
         Ok(type_decl)
@@ -301,10 +312,6 @@ impl<'a> Parser<'a> {
         self.expect(TokenType::Colon)?;
         let var_type = self.parse_type()?;
         Ok(ast::VariableDeclaration { var_name, var_type })
-    }
-
-    fn parse_statement(&mut self) -> Result<ast::Stmt, ParserError> {
-        todo!()
     }
 
     fn parse_block(&mut self) -> Result<ast::Stmt, ParserError> {
@@ -336,9 +343,7 @@ impl<'a> Parser<'a> {
 
     fn parse_while_statement(&mut self) -> Result<ast::Stmt, ParserError> {
         self.expect(TokenType::KwWhile)?;
-        self.expect(TokenType::Lparen)?;
         let condition = self.parse_expr()?;
-        self.expect(TokenType::Rparen)?;
         let body = Box::new(self.parse_block()?);
         Ok(ast::Stmt::WhileStatement {
             cond: Box::new(condition),
@@ -349,6 +354,7 @@ impl<'a> Parser<'a> {
     fn parse_return_statement(&mut self) -> Result<ast::Stmt, ParserError> {
         self.expect(TokenType::KwReturn)?;
         let expr = self.parse_expr()?;
+        self.expect(TokenType::SemiColon)?;
         Ok(ast::Stmt::ReturnStatement(expr))
     }
 
@@ -356,39 +362,51 @@ impl<'a> Parser<'a> {
         self.expect(TokenType::KwLet)?;
         let decl = self.parse_variable_decl()?;
         self.expect(TokenType::Assign)?;
-        let init = self.parse_expr()?;
-        Ok(ast::Stmt::LetStatement { decl, init })
+
+        match decl.var_type {
+            TypeDecl::Func(param_list, type_decl) => {
+                let block = self.parse_block()?;
+                return Ok(ast::Stmt::FuncDecl {
+                    func_name: decl.var_name,
+                    params: *param_list,
+                    return_type: *type_decl,
+                    body: Box::new(block),
+                });
+            }
+            _ => {
+                let expr = self.parse_expr()?;
+                self.expect(TokenType::SemiColon)?;
+                return Ok(ast::Stmt::LetStatement { decl, init: expr });
+            }
+        }
     }
 
     fn parse_set_statement(&mut self) -> Result<ast::Stmt, ParserError> {
         let var_name = self.expect(TokenType::Identifier)?.content.clone();
         self.expect(TokenType::Assign)?;
         let expr = self.parse_expr()?;
+        self.expect(TokenType::SemiColon)?;
         Ok(ast::Stmt::SetStatement {
             lvalue: var_name,
             rvalue: expr,
         })
     }
 
-    fn parse_function_decl_statement(&mut self) -> Result<ast::Stmt, ParserError> {
-        // TODO: Being a little smart here will let me reuse code between
-        // function and variabel decl, and make functions first-class citizens.
+    fn parse_statement(&mut self) -> Result<ast::Stmt, ParserError> {
+        if let Some(keyword) = self.input_stream.first() {
+            let token = keyword.content.clone();
 
-        self.expect(TokenType::KwLet)?;
-        let func_name = self.expect(TokenType::Identifier)?;
-        self.expect(TokenType::Colon)?;
-        self.expect(TokenType::KwFn)?;
-        let params = self.parse_param_list()?;
-        self.expect(TokenType::Arrow)?;
-        let return_type = self.parse_type()?;
-        self.expect(TokenType::Assign)?;
-        let body = Box::new(self.parse_block()?);
-        Ok(ast::Stmt::FuncDecl {
-            func_name: func_name.content.clone(),
-            params,
-            return_type,
-            body,
-        })
+            let stmt = match token.as_str() {
+                "let" => self.parse_let_statement()?,
+                "if" => self.parse_if_statement()?,
+                "while" => self.parse_while_statement()?,
+                "return" => self.parse_return_statement()?,
+                _ => self.parse_set_statement()?,
+            };
+            Ok(stmt)
+        } else {
+            Err(ParserError::EmptyTokenStream)
+        }
     }
 }
 
@@ -403,6 +421,70 @@ mod parser_tests {
         let mut parser = Parser {
             input_stream: &tokens,
         };
-        dbg!(parser.parse_expr().unwrap());
+        // dbg!(parser.parse_expr().unwrap());
+    }
+
+    #[test]
+    fn generate_ast() {
+        let program = r#"
+        let add_simd: fn(x: vec<i32>, y: vec<i32>) -> nil = {
+            let result: vec<i32> = simdadd(x, y);
+        }
+        "#;
+
+        let tokens = lexer(program).expect("Lexer SHOULD work.");
+        let mut parser = Parser {
+            input_stream: &tokens,
+        };
+        match parser.parse_statement() {
+            Ok(_stmt) => {
+                // dbg!(_stmt);
+            }
+            Err(e) => {
+                panic!("Error: {:?}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn comprehensive_test() {
+        let program = r#"
+        let gcd: fn(x: i32, y: i32) -> i32 = {
+            if y == 0 {
+                return x;
+            } else {
+                let temp: int = y;
+                y = y % x;
+                x = temp;
+
+                let add_simd: fn(x: vec<i32>, y: vec<i32>) -> nil =  {
+                    let result: vec<i32> = simdadd(x, y);
+                } 
+
+                while (x > 0) {
+                    x = x - 1;
+                    x = x + 1;
+                    x = x % 1;
+                    x = x * 1;
+                    x = x / 1;
+                }
+
+                return gcd(x, y);
+            }
+        }
+        "#;
+
+        let tokens = lexer(program).expect("Lexer SHOULD work.");
+        let mut parser = Parser {
+            input_stream: &tokens,
+        };
+        match parser.parse_statement() {
+            Ok(_stmt) => {
+
+            }
+            Err(e) => {
+                panic!("Error: {:?}", e);
+            }
+        }
     }
 }

@@ -43,12 +43,14 @@ pub enum Expr {
 }
 
 // Struct for variable declaration with a name and type
+#[derive(Debug)]
 pub struct VariableDeclaration {
     pub(crate) var_name: String,
     pub(crate) var_type: TypeDecl,
 }
 
 // Enum for type declarations
+#[derive(Debug)]
 pub enum TypeDecl {
     I32,
     F32,
@@ -56,20 +58,24 @@ pub enum TypeDecl {
     Vec(Box<TypeDecl>),               // Vector of a specific type
     Func(Box<ParamList>, Box<TypeDecl>), // Function type with parameters and return type
     UDT(String),
+    Nil
 }
 
 // ParamList is a vector of parameters with their names and types
+#[derive(Debug)]
 pub struct ParamList {
     pub(crate) params: Vec<Param>,
 }
 
 // Param represents a function parameter with a name and type
+#[derive(Debug)]
 pub struct Param {
     pub(crate) var_name: String,
     pub(crate) var_type: TypeDecl,
 }
 
 // Enum for different statement types
+#[derive(Debug)]
 pub enum Stmt {
     // Function declaration with name, parameters, return type, and body
     FuncDecl {
