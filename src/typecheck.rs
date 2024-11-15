@@ -71,7 +71,35 @@ impl TypeCheckInfo {
                 if discriminant(&lhstype) != discriminant(&rhstype) {
                     panic!("Type mismatch in binary expression.");
                 }
-                lhstype
+
+                // If the op is a relational operator, return bool.
+                // Otherwise, return the type of the lhs.
+                match op {
+                    crate::ast::Op::Plus
+                    | crate::ast::Op::Minus
+                    | crate::ast::Op::Multiply
+                    | crate::ast::Op::Mod
+                    | crate::ast::Op::Assign // TODO: Do we want to return types from assignments??
+                    | crate::ast::Op::Divide => {
+                        if lhstype != TypeDecl::I32 && lhstype != TypeDecl::F32 {
+                            panic!("Binary operator can only be applied to int or float.");
+                        } else {
+                            return lhstype;
+                        }
+                    }
+
+                    crate::ast::Op::Eq
+                    | crate::ast::Op::Ne
+                    | crate::ast::Op::Lt
+                    | crate::ast::Op::Gt
+                    | crate::ast::Op::Le
+                    | crate::ast::Op::And
+                    | crate::ast::Op::Or
+                    | crate::ast::Op::Not
+                    | crate::ast::Op::Ge => {
+                        return TypeDecl::Bool;
+                    }
+                }
             }
 
             Expr::Unary { op, operand } => {
@@ -205,6 +233,16 @@ mod typechecker_tests {
                 let y: i32 = 20;
                 let z: i32 = x + y;
                 return z;
+
+                if (x + y) > z {
+                    return x;
+                } else {
+                    return y;
+                }
+
+                while ( x < y ) {
+                    x = x + 1;
+                }
             }"#;
 
         // Lex, parse, and typecheck the program.
@@ -213,6 +251,6 @@ mod typechecker_tests {
         };
         let ast = parser.parse_statement().unwrap();
         let mut typecheck_info = crate::typecheck::TypeCheckInfo::new();
-        typecheck_info.typecheck_statement(&ast); 
+        typecheck_info.typecheck_statement(&ast);
     }
 }
