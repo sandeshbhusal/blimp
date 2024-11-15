@@ -15,6 +15,9 @@ type RvalType = extern "C" fn(f64, f64) -> f64;
 mod ast;
 mod lexer;
 mod parser;
+mod codegen;
+mod typecheck;
+mod interpreter;
 
 fn compile() -> RvalType {
     let jit_builder = JITBuilder::new(cranelift::module::default_libcall_names()).unwrap();

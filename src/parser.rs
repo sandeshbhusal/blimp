@@ -81,8 +81,8 @@ impl TryFrom<Token> for ast::Op {
     }
 }
 
-struct Parser<'a> {
-    input_stream: &'a [Token],
+pub(crate) struct Parser<'a> {
+    pub(crate) input_stream: &'a [Token],
 }
 
 impl<'a> Parser<'a> {
@@ -392,7 +392,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_statement(&mut self) -> Result<ast::Stmt, ParserError> {
+    pub fn parse_statement(&mut self) -> Result<ast::Stmt, ParserError> {
         if let Some(keyword) = self.input_stream.first() {
             let token = keyword.content.clone();
 

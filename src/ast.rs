@@ -1,5 +1,3 @@
-use crate::lexer::TokenType;
-
 // Enum for different operation types
 #[derive(Debug)]
 pub(crate) enum Op {
@@ -17,29 +15,30 @@ pub(crate) enum Op {
     And,
     Or,
     Not,
-    Assign
+    Assign,
 }
-
 
 // Enum for different expression types
 #[derive(Debug)]
 pub enum Expr {
-    I32(i32),                          // Integer literal
-    F32(f32),                        // Float literal
-    Identifier(String),                 // Variable identifier
-    FuncCall {                          // Function call with name and parameters
+    I32(i32),           // Integer literal
+    F32(f32),           // Float literal
+    Identifier(String), // Variable identifier
+    FuncCall {
+        // Function call with name and parameters
         func_name: String,
         params: Vec<Expr>,
     },
-    Binary {                            // Binary expression with lhs, rhs and operator
+    Binary {
+        // Binary expression with lhs, rhs and operator
         lhs: Box<Expr>,
         rhs: Box<Expr>,
         op: Op,
     },
     Unary {
         op: Op,
-        operand: Box<Expr>
-    }
+        operand: Box<Expr>,
+    },
 }
 
 // Struct for variable declaration with a name and type
@@ -50,25 +49,25 @@ pub struct VariableDeclaration {
 }
 
 // Enum for type declarations
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum TypeDecl {
     I32,
     F32,
     Bool,
-    Vec(Box<TypeDecl>),               // Vector of a specific type
+    Vec(Box<TypeDecl>),                  // Vector of a specific type
     Func(Box<ParamList>, Box<TypeDecl>), // Function type with parameters and return type
     UDT(String),
-    Nil
+    Nil,
 }
 
 // ParamList is a vector of parameters with their names and types
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ParamList {
     pub(crate) params: Vec<Param>,
 }
 
 // Param represents a function parameter with a name and type
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Param {
     pub(crate) var_name: String,
     pub(crate) var_type: TypeDecl,
