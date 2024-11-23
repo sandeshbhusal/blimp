@@ -86,6 +86,12 @@ pub(crate) struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    pub fn new(input_stream: &'a [Token]) -> Self {
+        Self {
+            input_stream,
+        }
+    }
+
     fn expect(&mut self, token_type: TokenType) -> Result<Token, ParserError> {
         let token = self
             .input_stream
@@ -250,7 +256,7 @@ impl<'a> Parser<'a> {
         return Ok(prefix);
     }
 
-    fn parse_expr(&mut self) -> Result<Expr, ParserError> {
+    pub fn parse_expr(&mut self) -> Result<Expr, ParserError> {
         self.oprec_parser(0)
     }
 

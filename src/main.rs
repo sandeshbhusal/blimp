@@ -17,6 +17,7 @@ mod lexer;
 mod parser;
 mod codegen;
 mod typecheck;
+mod value;
 mod interpreter;
 
 fn compile() -> RvalType {
@@ -60,52 +61,54 @@ fn compile() -> RvalType {
 const SIZE: usize = 100_000_000;
 
 fn main() -> Result<(), fasteval::Error> {
-    let compiled = compile();
+    // let compiled = compile();
 
-    let mut random = random::default(1234);
-    let mut vec1rand = vec![];
-    let mut vec2rand = vec![];
-    for _ in 0..SIZE {
-        vec1rand.push(random.read_f64());
-        vec2rand.push(random.read_f64());
-    }
+    // let mut random = random::default(1234);
+    // let mut vec1rand = vec![];
+    // let mut vec2rand = vec![];
+    // for _ in 0..SIZE {
+    //     vec1rand.push(random.read_f64());
+    //     vec2rand.push(random.read_f64());
+    // }
 
-    let mut cumul_crane = 0u128;
-    for i in 0..SIZE {
-        let x = vec1rand[i];
-        let y = vec2rand[i];
+    // let mut cumul_crane = 0u128;
+    // for i in 0..SIZE {
+    //     let x = vec1rand[i];
+    //     let y = vec2rand[i];
 
-        let start = Instant::now();
-        compiled(x, y);
-        cumul_crane += start.elapsed().as_micros();
-    }
+    //     let start = Instant::now();
+    //     compiled(x, y);
+    //     cumul_crane += start.elapsed().as_micros();
+    // }
 
-    println!();
-    println!("{}", cumul_crane);
+    // println!();
+    // println!("{}", cumul_crane);
 
-    let mut cumul_fastexpr = 0u128;
+    // let mut cumul_fastexpr = 0u128;
 
-    let parser = fasteval::Parser::new();
-    let mut slab = fasteval::Slab::new();
-    let expr_str = "a + b";
-    let compiled = parser
-        .parse(expr_str, &mut slab.ps)
-        .unwrap()
-        .from(&slab.ps)
-        .compile(&slab.ps, &mut slab.cs);
+    // let parser = fasteval::Parser::new();
+    // let mut slab = fasteval::Slab::new();
+    // let expr_str = "a + b";
+    // let compiled = parser
+    //     .parse(expr_str, &mut slab.ps)
+    //     .unwrap()
+    //     .from(&slab.ps)
+    //     .compile(&slab.ps, &mut slab.cs);
 
-    let mut map = BTreeMap::new();
-    for i in 0..SIZE {
-        map.insert("a", vec1rand[i]);
-        map.insert("b", vec2rand[i]);
+    // let mut map = BTreeMap::new();
+    // for i in 0..SIZE {
+    //     map.insert("a", vec1rand[i]);
+    //     map.insert("b", vec2rand[i]);
 
-        let start = Instant::now();
-        fasteval::eval_compiled!(compiled, &slab, &mut map);
-        cumul_fastexpr += start.elapsed().as_micros();
-    }
+    //     let start = Instant::now();
+    //     fasteval::eval_compiled!(compiled, &slab, &mut map);
+    //     cumul_fastexpr += start.elapsed().as_micros();
+    // }
 
-    println!();
-    println!("{}", cumul_fastexpr);
+    // println!();
+    // println!("{}", cumul_fastexpr);
+
+    // Ok(())
 
     Ok(())
 }

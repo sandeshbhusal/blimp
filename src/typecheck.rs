@@ -228,7 +228,7 @@ mod typechecker_tests {
     #[test]
     fn comprehensive_test() {
         let program = r#"
-            let mainfn: fn(x: i32, y: i32, z: i32) -> i32 = {
+            let mainfn: fn(x: i32, y: i32, z: i32, m: vec<i32>) -> i32 = {
                 let x: i32 = 10;
                 let y: i32 = 20;
                 let z: i32 = x + y;
